@@ -1,32 +1,43 @@
-// lib/actions/vote-actions.ts
+"use server";
+import { revalidatePath } from "next/cache";
+
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 
-/**
- * Server action to toggle a vote for a post
- */
-export async function toggleVote(formData: FormData): Promise<void> {
-  const postId = formData.get("postId") as string;
-  if (!postId) throw new Error("Post Id is required");
-
+export async function toggleVote(postId: number): Promise<void> {
+  // 1️⃣ Auth
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
+  // 2️⃣ Get DB user
   const dbUser = await prisma.user.findUnique({
     where: { clerkUserId: userId },
   });
-  if (!dbUser) throw new Error("Unauthorized");
+  if (!dbUser) throw new Error("User not found");
 
-  // Use findFirst instead of findUnique because no compound unique
+  // 3️⃣ Check existing vote
   const existingVote = await prisma.vote.findUnique({
-    where: { userId_postId: { userId: dbUser.id, postId: Number(postId) } },
+    where: {
+      userId_postId: {
+        userId: dbUser.id,
+        postId,
+      },
+    },
   });
 
+  // 4️⃣ Toggle
   if (existingVote) {
-    await prisma.vote.delete({ where: { id: existingVote.id } });
+    await prisma.vote.delete({
+      where: { id: existingVote.id },
+    });
   } else {
     await prisma.vote.create({
-      data: { userId: dbUser.id, postId: Number(postId) },
+      data: {
+        userId: dbUser.id,
+        postId,
+      },
     });
   }
+  // 5️⃣ Revalidate the feedback page so it shows the updated votes
+  revalidatePath("/feedback");
 }

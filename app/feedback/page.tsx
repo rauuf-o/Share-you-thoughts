@@ -27,12 +27,11 @@ const MyPostsPage = async () => {
   }
 
   const result = await allPosts();
+  const posts = result.success && result.posts ? result.posts : [];
 
   if (!result.success) {
     return <div className="text-center mt-10">{result.error}</div>;
   }
-
-  const posts = result.posts;
 
   const categories = await prisma.post.groupBy({
     by: ["category"],
@@ -119,7 +118,7 @@ const MyPostsPage = async () => {
 
         {/* POSTS */}
         <div className="lg:col-span-3">
-          <FeedbackList initialPosts={posts} userId={userId} />
+          <FeedbackList posts={posts || []} userId={userId} />{" "}
         </div>
       </div>
     </div>

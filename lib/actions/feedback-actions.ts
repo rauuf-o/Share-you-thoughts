@@ -1,4 +1,5 @@
 "use server";
+import { auth } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
 import { currentUser } from "@clerk/nextjs/server";
@@ -65,24 +66,27 @@ export async function allPosts() {
   }
 }
 
-export async function updateStatus(formData: FormData) {
-  const status = formData.get("status") as string;
-  const id = formData.get("id") as string;
+export async function updateStatus(postId: number, status: PostStatus) {
+  const { userId } = await auth();
 
-  // Validate the status against allowed values
-  if (!STATUS_ORDER.includes(status)) {
-    throw new Error("Invalid status");
+  if (!userId) {
+    throw new Error("Unauthorized");
   }
 
-  // Update the post in the database
-  await prisma.post.update({
-    where: { id: Number(id) },
-    data: { status: status as PostStatus },
-    include: {
-      author: true,
-      votes: true,
-    },
+  const user = await prisma.user.findUnique({
+    where: { clerkUserId: userId },
   });
+
+  if (!user || user.role !== "ADMIN") {
+    throw new Error("Admin access required");
+  }
+
+  await prisma.post.update({
+    where: { id: postId },
+    data: { status },
+  });
+
+  // 🔥 revalidate page
 }
 export async function userPosts(userId: string) {
   // Directly fetch posts for the given user ID

@@ -1,10 +1,20 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
-import { Sparkle, Map, MessageSquare } from "lucide-react";
+import { Sparkle, Map, MessageSquare, Shield } from "lucide-react";
 import ThemeToggle from "../Theme-toggle";
-import { Show, SignUpButton, UserButton } from "@clerk/nextjs";
+import { SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 
 const Navbar = () => {
+  const { isSignedIn, user } = useUser();
+
+  // ✅ Extract role safely
+  const role = user?.publicMetadata?.role as string | undefined;
+  console.log("Navbar rendered");
+  console.log(role);
+  const isAdmin = role === "ADMIN";
+
   return (
     <nav className="border-b bg-background">
       <div className="container mx-auto flex h-24 items-center justify-between px-4">
@@ -32,23 +42,34 @@ const Navbar = () => {
           >
             <MessageSquare className="h-4 w-4" /> Feedback
           </Link>
+
+          {/* ✅ ADMIN ONLY */}
+          {isSignedIn && isAdmin && (
+            <Link
+              href="/admin"
+              className="text-sm hover:text-primary transition-colors flex items-center gap-1"
+            >
+              <Shield className="h-4 w-4" />
+              Admin
+            </Link>
+          )}
         </div>
 
         {/* RIGHT SIDE */}
         <div className="flex items-center gap-4">
           <ThemeToggle />
 
-          <Show when="signed-out">
+          {/* ❌ Not signed in */}
+          {!isSignedIn && (
             <SignUpButton>
               <button className="bg-[#6c47ff] text-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer">
                 Sign Up
               </button>
             </SignUpButton>
-          </Show>
+          )}
 
-          <Show when="signed-in">
-            <UserButton />
-          </Show>
+          {/* ✅ Signed in */}
+          {isSignedIn && <UserButton />}
         </div>
       </div>
     </nav>
