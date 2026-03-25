@@ -10,6 +10,8 @@ import ThemeProvider from "@/components/ui/Theme-provider";
 import { SyncUser } from "@/lib/Sync-User";
 const inter = Inter({ subsets: ["latin"] });
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Your Opinion Matters",
   description: "share your opinion and see what others think",
