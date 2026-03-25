@@ -3,16 +3,37 @@ import { auth } from "@clerk/nextjs/server";
 import { STATUS_ORDER } from "@/app/data/status-data";
 import { updateStatus } from "@/lib/actions/feedback-actions";
 import { toggleVote } from "@/lib/actions/votes";
-type Props = { params: { id: string } };
+import { PostStatus } from "@/generated/prisma/client";
+import { revalidatePath } from "next/cache";
+
+type Props = { params: Promise<{ id: string }> }; // Fixed: params is a Promise in Next.js 15+
 
 export default async function PostPage({ params }: Props) {
+  const { id: postIdStr } = await params;
+  const postId = Number(postIdStr);
+
   const { userId } = await auth();
+
+  // --- Wrapper actions for forms ---
+  async function handleUpdateStatus(formData: FormData) {
+    "use server";
+    const status = formData.get("status") as PostStatus;
+    await updateStatus(postId, status);
+    revalidatePath(`/feedback/${postId}`);
+  }
+
+  async function handleToggleVote() {
+    "use server";
+    await toggleVote(postId);
+    revalidatePath(`/feedback/${postId}`);
+  }
 
   // Fetch the post with votes
   const post = await prisma.post.findUnique({
-    where: { id: Number(params.id) },
+    where: { id: postId },
     include: { votes: true },
   });
+
 
   if (!post) return <div>Post not found</div>;
 
@@ -42,7 +63,7 @@ export default async function PostPage({ params }: Props) {
 
       {/* --- Admin Status Update Form --- */}
       {isAdmin && (
-        <form action={updateStatus} className="mt-6">
+        <form action={handleUpdateStatus} className="mt-6">
           <h2 className="text-xl font-semibold">Update Feedback Status</h2>
           <input type="hidden" name="id" value={post.id} />
           <select
@@ -64,7 +85,7 @@ export default async function PostPage({ params }: Props) {
 
       {/* --- Vote Toggle Form --- */}
       {dbUserId && (
-        <form action={toggleVote} className="mt-6">
+        <form action={handleToggleVote} className="mt-6">
           <input type="hidden" name="postId" value={post.id} />
           <button
             className={`px-4 py-2 rounded text-white ${

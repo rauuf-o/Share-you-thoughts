@@ -166,7 +166,8 @@ const AdminFeedbackTable = ({ posts }: { posts: Post[] }) => {
 
                         <SelectContent>
                           {STATUS_ORDER.map((status) => {
-                            const statusGroup = STATUS_GROUPS[status];
+                            const statusGroup =
+                              STATUS_GROUPS[status as PostStatus];
                             const Icon = statusGroup.icon;
 
                             return (
